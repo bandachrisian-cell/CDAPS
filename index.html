@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Community Disaster Alert and Preparedness System</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-role="guest">
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <h1>🛡️ Community Disaster Alert and Preparedness System</h1>
+  <div class="who">
+    <a class="btn danger" href="tel:911">Call 911</a>
+    <button id="theme" class="btn small alt">Dark mode</button>
+    <span id="who-name"></span>
+    <button id="logout" class="btn small user-only">Log out</button>
+  </div>
+</header>
+<div id="banner" class="banner lv0" role="status">No active alerts</div>
+<nav id="nav" class="tabs" aria-label="Sections"></nav>
+<div id="toast" class="toast hidden" role="alert"></div>
+
+<main id="main">
+
+<!-- LOGIN / REGISTER -->
+<section id="v-auth" class="view">
+  <div class="hero"><div>
+    <h2>Stay informed. Stay prepared. Stay safe.</h2>
+    <p>Get live alerts, find your nearest evacuation center, learn what to do in a disaster, and test your readiness.</p></div><svg class="hero-art" viewBox="0 0 100 110" aria-hidden="true"><path d="M50 6l38 14v30c0 28-17 46-38 54C29 96 12 78 12 50V20z" fill="#fff" opacity=".95"/><path d="M32 54l13 13 24-28" fill="none" stroke="#2563eb" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <div class="row">
+    <form id="login-form" class="card"><h2>Log in</h2>
+      <label>Username<input name="user" autocomplete="username"></label>
+      <label>Password<input name="pass" type="password" autocomplete="current-password"></label>
+      <p class="error"></p><button class="btn">Log in</button>
+    </form>
+    <form id="reg-form" class="card"><h2>New resident? Register</h2>
+      <label>Full name<input name="fullname" maxlength="40"></label>
+      <label>Username (4-15 letters, numbers, _)<input name="user" maxlength="15"></label>
+      <label>Password (6+ characters)<input name="pass" type="password"></label>
+      <p class="error"></p><button class="btn">Create account</button>
+    </form>
+  </div>
+  <p class="meta">Demo administrator: username <b>admin</b>, password <b>admin123</b></p>
+</section>
+
+<!-- DASHBOARD -->
+<section id="v-dash" class="view hidden">
+  <div class="resident-only">
+    <div class="hero"><div><h2>Be ready before it happens</h2>
+      <p>Learn the signs, practice the steps, and pack your go-bag.</p>
+      <div class="acts"><button class="btn small alt" data-go="guide">Start learning</button><button class="btn small alt" data-go="quiz">Test yourself</button></div></div><svg class="hero-art" viewBox="0 0 100 110" aria-hidden="true"><path d="M50 6l38 14v30c0 28-17 46-38 54C29 96 12 78 12 50V20z" fill="#fff" opacity=".95"/><path d="M32 54l13 13 24-28" fill="none" stroke="#2563eb" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="card"><h2>Emergency quick access</h2><div id="quick" class="acts"></div>
+      <p id="tip"></p><button id="next-tip" class="btn small alt">Another tip</button></div>
+    <div class="card"><h2>Your preparedness</h2><div id="progress"></div></div>
+    <h2>Announcements</h2><ul id="news-list" class="list"></ul>
+    <h2>Active alerts</h2><ul id="dash-alerts" class="list"></ul>
+    <div class="card levels"><h2>How to read alert levels</h2>
+      <div class="lv1"><span class="tag">Low</span> Be aware. Monitor updates.</div>
+      <div class="lv2"><span class="tag">Moderate</span> Be prepared. Check your go-bag and route.</div>
+      <div class="lv3"><span class="tag">High</span> Take action. Get ready to leave.</div>
+      <div class="lv4"><span class="tag">Critical</span> Act now. Evacuate or take shelter.</div></div>
+  </div>
+  <div class="admin-only">
+    <h2>System overview</h2><div id="stats" class="stats"></div>
+    <h2>Recent activity</h2><ul id="recent" class="list"></ul>
+  </div>
+</section>
+
+<!-- ALERTS (residents: dashboard + history, admin: manage) -->
+<section id="v-alerts" class="view hidden">
+  <form id="alert-form" class="card admin-only"><h2>Alert details</h2>
+    <input type="hidden" name="id">
+    <label>Title<input name="title" maxlength="80" placeholder="e.g. Flooding along Riverside Road"></label>
+    <div class="row">
+      <label>Hazard<select name="type" class="types"></select></label>
+      <label>Alert level<select name="level"><option value="1">Low</option><option value="2">Moderate</option><option value="3">High</option><option value="4">Critical</option></select></label>
+      <label>Map zone<select name="zone"><option value="none">None</option><option value="NW">Northwest</option><option value="NE">Northeast</option><option value="SW">Southwest</option><option value="SE">Southeast</option></select></label>
+    </div>
+    <label>Location<input name="location" maxlength="60" placeholder="e.g. Purok 3, Brgy. Lourdes"></label>
+    <label>Instructions for residents<textarea name="details" rows="3" maxlength="300"></textarea></label>
+    <p class="error"></p>
+    <button class="btn" data-status="published">Publish</button>
+    <button class="btn alt" data-status="draft">Save as draft</button>
+    <button type="reset" class="btn alt">Clear</button>
+  </form>
+  <h2>Alerts</h2>
+  <div class="row">
+    <input id="f-q" type="search" placeholder="Search alerts" aria-label="Search alerts">
+    <select id="f-type" class="types" aria-label="Hazard"><option value="all">All hazards</option></select>
+    <select id="f-status" aria-label="Status"><option value="published">Active</option><option value="archived">History</option><option value="draft">Drafts (admin)</option><option value="all">All</option></select>
+  </div>
+  <ul id="alert-list" class="list"></ul>
+</section>
+
+<!-- WEATHER -->
+<section id="v-weather" class="view hidden">
+  <div id="weather-card" class="card"></div>
+  <form id="weather-form" class="card admin-only"><h2>Update weather</h2>
+    <div class="row">
+      <label>Condition<input name="condition" maxlength="40"></label>
+      <label>Temperature (°C)<input name="temp" type="number"></label>
+      <label>Humidity (%)<input name="humidity" type="number"></label>
+      <label>Wind<input name="wind" maxlength="30"></label>
+    </div>
+    <label>Forecast (one day per line)<textarea name="forecast" rows="3"></textarea></label>
+    <p class="error"></p><button class="btn">Save weather</button>
+  </form>
+</section>
+
+<!-- DISASTER INFORMATION, PREPAREDNESS GUIDE, TIPS -->
+<section id="v-guide" class="view hidden">
+  <h2>Learn how to stay safe</h2>
+  <p class="lead">Open each hazard to see how to recognize it and what to do before, during, and after. Open all six to finish the course.</p>
+  <div class="progress"><div id="learn-bar"></div></div>
+  <p id="learn-text" class="meta"></p>
+  <details class="card hazard" data-topic="Typhoon"><summary>🌀 Typhoon</summary>
+    <div class="scene"><svg viewBox="0 0 400 110" preserveAspectRatio="xMidYMid slice" role="img" aria-hidden="true"><rect width="400" height="110" fill="#475569"/><path d="M0 88h400v22H0z" fill="#334155"/><g fill="none" stroke="#e2e8f0" stroke-width="5" stroke-linecap="round"><path d="M250 30a38 22 0 1 1-40 18"/><path d="M240 40a24 14 0 1 1-24 10"/></g><path d="M40 20l-8 18M80 10l-8 18M120 28l-8 18M160 8l-8 18M330 14l-8 18M370 34l-8 18" stroke="#93c5fd" stroke-width="3"/><path d="M60 88V64l25-17 25 17v24z" fill="#f8fafc"/></svg></div>
+    <p>A tropical storm with strong winds and heavy rain that can cause floods and landslides.</p>
+    <p class="fact"><b>Did you know?</b> Typhoons bring three dangers at once: strong wind, heavy rain, and storm surge along the coast.</p>
+    <p class="signs"><b>Know the signs:</b> Official storm signals, a darkening sky, rising winds, and rough seas.</p>
+    <div class="steps">
+      <div class="step before"><h4>Before</h4><p>Pack your go-bag, secure windows and roofing, charge your phone, and know your evacuation center.</p></div>
+      <div class="step during"><h4>During</h4><p>Stay indoors away from windows. Follow official alerts. Evacuate if told to.</p></div>
+      <div class="step after"><h4>After</h4><p>Avoid floodwater and fallen wires. Check on neighbors and report damage.</p></div>
+    </div></details>
+  <details class="card hazard" data-topic="Flood"><summary>🌊 Flood</summary>
+    <div class="scene"><svg viewBox="0 0 400 110" preserveAspectRatio="xMidYMid slice" role="img" aria-hidden="true"><rect width="400" height="110" fill="#bae6fd"/><path d="M60 80V55l30-20 30 20v25z" fill="#fef3c7"/><path d="M0 70q25-12 50 0t50 0 50 0 50 0 50 0 50 0 50 0 50 0v40H0z" fill="#2563eb" opacity=".85"/><path d="M0 90q25-10 50 0t50 0 50 0 50 0 50 0 50 0 50 0 50 0v20H0z" fill="#1d4ed8"/></svg></div>
+    <p>Water rising over normal ground level, often after heavy rain or when rivers overflow.</p>
+    <p class="fact"><b>Did you know?</b> Many flood deaths happen when people try to walk or drive through moving water.</p>
+    <p class="signs"><b>Know the signs:</b> Hours of heavy rain, rising rivers, blocked drains, and muddy water in streams.</p>
+    <div class="steps">
+      <div class="step before"><h4>Before</h4><p>Know high ground nearby. Keep documents in waterproof bags.</p></div>
+      <div class="step during"><h4>During</h4><p>Move to higher ground. Turn off electricity. Never walk or drive through floodwater.</p></div>
+      <div class="step after"><h4>After</h4><p>Boil drinking water if unsure it is safe. Clean and dry your home.</p></div>
+    </div></details>
+  <details class="card hazard" data-topic="Earthquake"><summary>🏚️ Earthquake</summary>
+    <div class="scene"><svg viewBox="0 0 400 110" preserveAspectRatio="xMidYMid slice" role="img" aria-hidden="true"><rect width="400" height="110" fill="#fde68a"/><path d="M0 80h400v30H0z" fill="#a16207"/><g fill="#94a3b8"><rect x="60" y="40" width="34" height="40" transform="rotate(-6 77 80)"/><rect x="270" y="30" width="40" height="50" transform="rotate(5 290 80)"/></g><path d="M180 80l12 10-10 8 14 10-8 8" stroke="#451a03" stroke-width="4" fill="none"/><path d="M30 30l-10 6 10 6M370 40l10 6-10 6" stroke="#92400e" stroke-width="3" fill="none"/></svg></div>
+    <p>Sudden shaking of the ground. Aftershocks can follow.</p>
+    <p class="fact"><b>Did you know?</b> An earthquake can strike without warning, so the best protection is practicing drop, cover, and hold on.</p>
+    <p class="signs"><b>Know the signs:</b> There is usually no warning. Learn the safe spots in every room before it happens.</p>
+    <div class="steps">
+      <div class="step before"><h4>Before</h4><p>Secure heavy furniture. Plan a meeting point.</p></div>
+      <div class="step during"><h4>During</h4><p>Drop, cover, and hold on. Stay away from glass and shelves. If outside, move to an open area.</p></div>
+      <div class="step after"><h4>After</h4><p>Expect aftershocks. Check for injuries and gas leaks. Leave damaged buildings.</p></div>
+    </div></details>
+  <details class="card hazard" data-topic="Fire"><summary>🔥 Fire</summary>
+    <div class="scene"><svg viewBox="0 0 400 110" preserveAspectRatio="xMidYMid slice" role="img" aria-hidden="true"><rect width="400" height="110" fill="#1e293b"/><path d="M0 90h400v20H0z" fill="#0f172a"/><path d="M150 90V60l50-30 50 30v30z" fill="#64748b"/><path d="M200 90c-30-5-25-30-10-45 2 12 10 15 14 10 3 8 20 15 14 30-3 6-10 5-18 5z" fill="#f97316"/><path d="M200 90c-14-2-12-14-5-22 2 6 6 8 9 5 4 6 8 12 3 17z" fill="#fde047"/></svg></div>
+    <p>An uncontrolled fire in a home or building that spreads quickly.</p>
+    <p class="fact"><b>Did you know?</b> Smoke is often more dangerous than flames, so stay low and get out fast.</p>
+    <p class="signs"><b>Know the signs:</b> Smell of smoke, crackling sounds, a hot door, or a smoke alarm going off.</p>
+    <div class="steps">
+      <div class="step before"><h4>Before</h4><p>Check wiring and stoves. Know two ways out of every room.</p></div>
+      <div class="step during"><h4>During</h4><p>Get out and stay out. Crawl low under smoke. Call 911 once you are safe.</p></div>
+      <div class="step after"><h4>After</h4><p>Do not re-enter until authorities say it is safe.</p></div>
+    </div></details>
+  <details class="card hazard" data-topic="Landslide"><summary>⛰️ Landslide</summary>
+    <div class="scene"><svg viewBox="0 0 400 110" preserveAspectRatio="xMidYMid slice" role="img" aria-hidden="true"><rect width="400" height="110" fill="#bfdbfe"/><path d="M0 110V70l120-50 160 45 120 10v35z" fill="#65a30d"/><path d="M150 38l90 30 40 12 20 30H120z" fill="#92400e"/><g fill="#78350f"><circle cx="220" cy="75" r="8"/><circle cx="260" cy="88" r="10"/><circle cx="190" cy="92" r="6"/></g></svg></div>
+    <p>Soil and rocks sliding down a slope, often after long rain.</p>
+    <p class="fact"><b>Did you know?</b> Landslides can follow days of heavy rain or an earthquake, even after the rain stops.</p>
+    <p class="signs"><b>Know the signs:</b> New cracks in the ground, tilting trees or poles, muddy streams, and rumbling sounds.</p>
+    <div class="steps">
+      <div class="step before"><h4>Before</h4><p>Watch for cracks in the ground and tilting trees. Know your evacuation route.</p></div>
+      <div class="step during"><h4>During</h4><p>Move away from the slide path, uphill sideways if possible.</p></div>
+      <div class="step after"><h4>After</h4><p>Stay away from the slope. Report broken utilities.</p></div>
+    </div></details>
+  <details class="card hazard" data-topic="Volcano"><summary>🌋 Volcano</summary>
+    <div class="scene"><svg viewBox="0 0 400 110" preserveAspectRatio="xMidYMid slice" role="img" aria-hidden="true"><rect width="400" height="110" fill="#fecaca"/><path d="M110 110L185 30h30l75 80z" fill="#78350f"/><path d="M185 30l-8-16M200 28V10M215 30l8-16" stroke="#f97316" stroke-width="5" stroke-linecap="round"/><path d="M190 32l6 20-8 10M210 32l-4 25 10 12" stroke="#ef4444" stroke-width="4" fill="none"/><circle cx="260" cy="20" r="14" fill="#9ca3af" opacity=".7"/><circle cx="290" cy="12" r="10" fill="#9ca3af" opacity=".6"/></svg></div>
+    <p>Ash, gas, and lava from an active volcano. Ashfall and lahars can reach far beyond the crater.</p>
+    <p class="fact"><b>Did you know?</b> Ashfall and lahars (mud flows) can reach communities far from the crater.</p>
+    <p class="signs"><b>Know the signs:</b> A higher official alert level, rumbling, steaming, small earthquakes, or ash plumes.</p>
+    <div class="steps">
+      <div class="step before"><h4>Before</h4><p>Know the danger zone and the official alert level. Keep masks and goggles ready.</p></div>
+      <div class="step during"><h4>During</h4><p>Stay indoors, cover your nose and mouth, and avoid river channels where lahars flow.</p></div>
+      <div class="step after"><h4>After</h4><p>Clear ash from roofs carefully, since it is heavy when wet.</p></div>
+    </div></details>
+  <details class="card"><summary>👨‍👩‍👧 Make a family emergency plan</summary>
+    <p>Do this once and everyone knows what to do.</p>
+    <p><b>1.</b> Pick a meeting place near home and another outside your area.</p>
+    <p><b>2.</b> Write down key phone numbers and keep a copy in each go-bag.</p>
+    <p><b>3.</b> Assign roles: who grabs the bag, who helps children or elders, who locks up.</p>
+    <p><b>4.</b> Practice the plan twice a year.</p></details>
+  <details class="card"><summary>🚨 What each alert level means</summary>
+    <p><b>Low:</b> Be aware and monitor updates.</p>
+    <p><b>Moderate:</b> Be prepared. Check your go-bag and route.</p>
+    <p><b>High:</b> Take action. Get ready to leave.</p>
+    <p><b>Critical:</b> Act now. Evacuate or take shelter immediately.</p></details>
+  <h2>Myth or fact?</h2>
+  <p class="lead">Test what you think you know. Choose an answer to see why.</p>
+  <ul id="myths" class="list"></ul>
+</section>
+
+<!-- GO-BAG -->
+<section id="v-gobag" class="view hidden">
+  <h2>Emergency go-bag checklist</h2>
+  <div class="progress"><div id="bag-bar"></div></div>
+  <p id="bag-text" class="meta"></p>
+  <ul id="bag-list" class="checks"></ul>
+</section>
+
+<!-- PREPAREDNESS QUIZ -->
+<section id="v-quiz" class="view hidden">
+  <h2>Preparedness quiz</h2>
+  <p id="quiz-best" class="meta"></p>
+  <form id="quiz-form" class="card"><div id="quiz-qs"></div><p class="error"></p><button class="btn">Check my answers</button></form>
+  <div id="quiz-result" class="card hidden"></div>
+</section>
+
+<!-- EVACUATION CENTERS -->
+<section id="v-centers" class="view hidden">
+  <form id="center-form" class="card admin-only"><h2>Evacuation center</h2>
+    <input type="hidden" name="id">
+    <label>Name<input name="name" maxlength="60"></label>
+    <label>Address<input name="address" maxlength="80"></label>
+    <div class="row">
+      <label>Capacity<input name="capacity" type="number"></label>
+      <label>Latitude<input name="lat" type="number" step="any"></label>
+      <label>Longitude<input name="lng" type="number" step="any"></label>
+    </div>
+    <div class="acts"><button type="button" id="use-loc" class="btn small alt">Use my current location</button>
+    </div>
+    <p class="error"></p><button class="btn">Save center</button> <button type="reset" class="btn alt">Clear</button>
+  </form>
+  <h2>Evacuation centers</h2>
+  <input id="c-q" type="search" placeholder="Search by name or address" aria-label="Search centers">
+  <ul id="center-list" class="list"></ul>
+</section>
+
+<!-- HOTLINES -->
+<section id="v-hotlines" class="view hidden">
+  <form id="contact-form" class="card admin-only"><h2>Emergency contact</h2>
+    <input type="hidden" name="id">
+    <div class="row">
+      <label>Name<input name="name" maxlength="50"></label>
+      <label>Number<input name="number" maxlength="15"></label>
+    </div>
+    <p class="error"></p><button class="btn">Save contact</button> <button type="reset" class="btn alt">Clear</button>
+  </form>
+  <h2>Emergency hotlines</h2>
+  <ul id="contact-list" class="list"></ul>
+</section>
+
+<!-- INCIDENT REPORTS -->
+<section id="v-report" class="view hidden">
+  <form id="report-form" class="card resident-only"><h2>Report an incident</h2>
+    <div class="row">
+      <label>Type<select name="type" class="rtypes"></select></label>
+      <label>Location<input name="location" maxlength="60"></label>
+    </div>
+    <label>What is happening?<textarea name="description" rows="3" maxlength="300"></textarea></label>
+    <p class="error"></p><button class="btn">Send report</button>
+  </form>
+  <h2 class="resident-only">My reports</h2><h2 class="admin-only">Resident reports</h2>
+  <div class="row">
+    <input id="r-q" type="search" placeholder="Search reports" aria-label="Search reports">
+    <select id="r-status" aria-label="Status"><option value="all">All statuses</option><option>Pending</option><option>Under Review</option><option>Resolved</option></select>
+  </div>
+  <ul id="report-list" class="list"></ul>
+</section>
+
+<!-- ANNOUNCEMENTS (admin) -->
+<section id="v-news" class="view hidden">
+  <form id="news-form" class="card"><h2>Publish announcement</h2>
+    <input type="hidden" name="id">
+    <label>Title<input name="title" maxlength="80"></label>
+    <label>Message<textarea name="message" rows="3" maxlength="300"></textarea></label>
+    <p class="error"></p><button class="btn">Publish</button> <button type="reset" class="btn alt">Clear</button>
+  </form>
+  <ul id="news-admin" class="list"></ul>
+</section>
+
+<!-- USERS (admin) -->
+<section id="v-users" class="view hidden"><h2>Registered residents</h2><ul id="user-list" class="list"></ul></section>
+
+<!-- ACTIVITY LOGS (admin) -->
+<section id="v-logs" class="view hidden"><h2>Activity logs</h2><ul id="log-list" class="list"></ul></section>
+
+<!-- MAP -->
+<section id="v-map" class="view hidden">
+  <h2>Disaster map</h2>
+  <button id="locate" class="btn small">Use my current location</button>
+  <p id="map-msg" class="meta"></p>
+  <div id="map" class="map" aria-label="Community map"></div>
+  <p class="meta">Blue dot = you. Marker = evacuation center. Red dot = unresolved incident. Shaded square = area under an active alert, colored by level. Tap any of them for details. The map needs an internet connection.</p>
+</section>
+
+</main>
+<footer class="foot">Data is saved only in this browser.</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
